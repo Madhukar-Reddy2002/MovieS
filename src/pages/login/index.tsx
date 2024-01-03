@@ -5,11 +5,10 @@ import {
   Checkbox,
   FormControlLabel,
   InputBase,
-  Link,
   Typography,
 } from "@mui/material";
 import movieBg from "../../assets/movie-bg1.jpg";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "../../firebase";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from 'react-toastify';
@@ -23,12 +22,32 @@ const Login = () => {
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!email || !password) {
+        // Handle case where email or password is empty
+        toast.error('Email and password are required.');
+        return;
+      }
+
+      // Try to sign in the user
       await signInWithEmailAndPassword(auth, email, password);
       navigate('/home');
     } catch (error:any) {
       console.error(error);
-      if (error.code === 'auth/wrong-password') {
+      // If user doesn't exist, create a new account
+      if (error.code) {
+        try {
+          // Create a new user
+          await createUserWithEmailAndPassword(auth, email, password);
+          navigate('/home');
+        } catch (createError) {
+          console.error('Error creating user:', createError);
+          toast.error('Error creating user. Please try again.');
+        }
+      } else if (error.code === 'auth/wrong-password') {
         toast.error('Incorrect password. Please try again.');
+      } else {
+        // Handle other authentication errors
+        toast.error('Authentication error. Please try again.');
       }
     }
   }
@@ -118,18 +137,16 @@ const Login = () => {
           >
             Sign In with Google
           </Button>
-          <Box>
-            <Typography fontWeight={300} mt={2}>
-              <Link href="#" underline="hover" sx={{ color: "#fff" }}>
-                Forgot Password
-              </Link>
-            </Typography>
-            <Typography fontWeight={300} mt={2}>
-              <Link href="#" underline="hover" sx={{ color: "#fff" }}>
-                Don't have an account? Sign up
-              </Link>
-            </Typography>
-          </Box>
+          <Button
+            variant="contained"
+            fullWidth
+            sx={{ mt: 2, backgroundColor: "#4285F4", color: "#fff" }}
+            onClick={()=>{
+              navigate('/home');
+            }}
+          >
+            Continue
+          </Button>
         </Box>
         <ToastContainer />
       </Box>
